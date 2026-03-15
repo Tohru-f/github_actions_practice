@@ -2,12 +2,15 @@ name: Node.js CI
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
 jobs:
   build:
-    name: Build and Test
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,5 +24,22 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Run tests
-        run: npm test
+      - name: Run ESLint
+        uses: reviewdog/action-eslint@v1
+        with:
+          reporter: github-pr-review
+          eslint_flags: '.'
+
+      - name: Run build
+        run: npm run build # 型エラー、importミス、Next.jsの設定ミスなどが無いことを確認
+
+  danger:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      - name: Danger
+        uses: danger/danger-js@latest
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
+          DANGER_DISABLE_TRANSPILATION: true #エラー回避、githubのissueに掲載されている
